@@ -27,9 +27,19 @@ import {
 } from "@/components/ui/form";
 import { useState } from "react";
 import userOperations from "@/app/operations/user";
-import { useLazyQuery, useQuery } from "@apollo/client";
-import { SearchUserInput, SearchsUsersData } from "@/lib/typesdefs";
+import { useLazyQuery, useMutation, useQuery } from "@apollo/client";
+import {
+  SearchUserInput,
+  SearchedUser,
+  SearchsUsersData,
+  createConversationData,
+  createConversationInput,
+} from "@/lib/typesdefs";
 import SearchUsers from "./SearchUsers";
+import conversationOperations from "@/app/operations/conversation";
+import { useSession } from "next-auth/react";
+import Participants from "./Participants";
+import { Session } from "next-auth";
 
 const FormSchema = z.object({
   username: z.string().min(2, {
@@ -37,7 +47,11 @@ const FormSchema = z.object({
   }),
 });
 
-export function Modal() {
+interface Props {
+  session: Session;
+}
+
+export function Modal({ session }: Props) {
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
@@ -52,6 +66,13 @@ export function Modal() {
     SearchUserInput
   >(userOperations.Queries.searchUsers);
 
+  //   create contact list
+
+  const [createConversationMutation, { loading: loadingConversation }] =
+    useMutation<createConversationData, createConversationInput>(
+      conversationOperations.Mutations.createConversation
+    );
+
   function onSubmit(user: z.infer<typeof FormSchema>) {
     const { username } = user;
 
@@ -60,12 +81,42 @@ export function Modal() {
     // setOpen(false);
   }
 
-  console.log("here is data:", data?.searchUsers);
+  const [participants, setParticipants] = useState<Array<SearchedUser>>([]);
+
+  const addParticipant = (user: SearchedUser) => {
+    if (participants.includes(user)) {
+      return participants;
+    }
+
+    setParticipants((prev) => [...prev, user]);
+  };
+
+  const removePart = (userId: string) => {
+    setParticipants((part) => part.filter((item) => item.id !== userId));
+  };
 
   const [open, setOpen] = useState(false);
 
   const modalHandler = () => {
     setOpen(!open);
+  };
+
+  //   get signed in user (YOU)
+
+  const signedInuser = session?.user.id;
+
+  const createConversation = async () => {
+    const participantId = participants.map((part) => part.id);
+
+    try {
+      const { data } = await createConversationMutation({
+        variables: { participantId: [...participantId, signedInuser] },
+      });
+
+      console.log(data);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   return (
@@ -106,11 +157,31 @@ export function Modal() {
               variant="secondary"
               className="w-full"
             >
-              {loading ? "Loading..." : "Search"}
+              {loading ? "Searching..." : "Search"}
             </Button>
           </form>
         </Form>
-        {data?.searchUsers && <SearchUsers users={data.searchUsers} />}
+        {data?.searchUsers && (
+          <SearchUsers
+            addParticipant={addParticipant}
+            users={data.searchUsers}
+          />
+        )}
+        {participants && (
+          <>
+            <Participants participants={participants} removePart={removePart} />
+            <Button
+              onClick={createConversation}
+              variant={"default"}
+              className="w-full"
+              disabled={participants.length === 0}
+            >
+              {loadingConversation
+                ? "Starting conversation"
+                : "Start Conversion"}
+            </Button>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

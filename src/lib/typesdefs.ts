@@ -34,3 +34,15 @@ export interface SearchedUser {
   id: string;
   username: string;
 }
+
+// conversations
+
+export interface createConversationData {
+  createConversation: {
+    conversationId: string;
+  };
+}
+
+export interface createConversationInput {
+  participantId: Array<string>;
+}
