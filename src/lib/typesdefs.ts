@@ -21,3 +21,16 @@ export interface CreateUsernameResponse {
   success?: Boolean;
   error?: String;
 }
+
+export interface SearchUserInput {
+  username: string;
+}
+
+export interface SearchsUsersData {
+  searchUsers: SearchedUser[];
+}
+
+export interface SearchedUser {
+  id: string;
+  username: string;
+}

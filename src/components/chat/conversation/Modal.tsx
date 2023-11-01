@@ -1,5 +1,3 @@
-import { CopyIcon } from "@radix-ui/react-icons";
-
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -28,6 +26,10 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useState } from "react";
+import userOperations from "@/app/operations/user";
+import { useLazyQuery, useQuery } from "@apollo/client";
+import { SearchUserInput, SearchsUsersData } from "@/lib/typesdefs";
+import SearchUsers from "./SearchUsers";
 
 const FormSchema = z.object({
   username: z.string().min(2, {
@@ -43,12 +45,25 @@ export function Modal() {
     },
   });
 
-  function onSubmit(data: z.infer<typeof FormSchema>) {
-    console.log(data);
-    setOpen(false);
+  // query
+
+  const [searchUser, { data, error, loading }] = useLazyQuery<
+    SearchsUsersData,
+    SearchUserInput
+  >(userOperations.Queries.searchUsers);
+
+  function onSubmit(user: z.infer<typeof FormSchema>) {
+    const { username } = user;
+
+    searchUser({ variables: { username } });
+
+    // setOpen(false);
   }
 
-  const [open, setOpen] = useState(true);
+  console.log("here is data:", data?.searchUsers);
+
+  const [open, setOpen] = useState(false);
+
   const modalHandler = () => {
     setOpen(!open);
   };
@@ -62,7 +77,7 @@ export function Modal() {
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle></DialogTitle>
+          <DialogTitle>Search User</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
@@ -75,7 +90,7 @@ export function Modal() {
               name="username"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Username</FormLabel>
+                  {/* <FormLabel>Username</FormLabel> */}
                   <FormControl>
                     <Input placeholder="search username..." {...field} />
                   </FormControl>
@@ -85,11 +100,17 @@ export function Modal() {
               )}
             />
 
-            <Button type="submit" variant="secondary" className="w-full">
-              Close
+            <Button
+              disabled={loading}
+              type="submit"
+              variant="secondary"
+              className="w-full"
+            >
+              {loading ? "Loading..." : "Search"}
             </Button>
           </form>
         </Form>
+        {data?.searchUsers && <SearchUsers users={data.searchUsers} />}
       </DialogContent>
     </Dialog>
   );

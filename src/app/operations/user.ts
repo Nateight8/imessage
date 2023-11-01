@@ -1,7 +1,17 @@
 import gql from "graphql-tag";
 
 const userOperations = {
-  Queries: {},
+  Queries: {
+    searchUsers: gql`
+      query SearchUsers($username: String!) {
+        searchUsers(username: $username) {
+          id
+          username
+        }
+      }
+    `,
+  },
+
   Mutations: {
     createUsername: gql`
       mutation CreateUsername($username: String!) {
